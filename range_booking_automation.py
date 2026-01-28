@@ -65,7 +65,6 @@ class Resource:
     id: str
     name: str
     resource_type: str  # 'bay' or 'facility'
-    capacity: int = 1
     
     def __post_init__(self):
         if not self.id:
@@ -220,12 +219,12 @@ class RangeBookingAutomation:
         conflicts = self.check_conflicts(booking)
         
         if conflicts and not force_override:
-            details = f"Cannot approve due to conflicts with bookings: {[c.id for c in conflicts]}"
+            details = f"Approval failed - conflicts with bookings: {[c.id for c in conflicts]}"
             self._add_audit_log(
                 action=ActionType.APPROVE,
                 actor=approver,
                 booking=booking,
-                details=details
+                details=f"FAILED: {details}"
             )
             return False
         
@@ -328,17 +327,23 @@ class RangeBookingAutomation:
             booking.start_time = old_start
             booking.end_time = old_end
             
-            details = f"Cannot reschedule due to conflicts with bookings: {[c.id for c in conflicts]}"
+            details = f"Reschedule failed - conflicts with bookings: {[c.id for c in conflicts]}"
             self._add_audit_log(
                 action=ActionType.RESCHEDULE,
                 actor=rescheduler,
                 booking=booking,
-                details=details
+                details=f"FAILED: {details}"
             )
             return False
         
-        # Keep the new times
-        booking.status = BookingStatus.APPROVED
+        # Keep the new times, but preserve status unless it was pending
+        # (rescheduling a pending booking should not auto-approve it)
+        if booking.status == BookingStatus.PENDING:
+            # Don't change status - pending bookings stay pending after reschedule
+            pass
+        else:
+            # For already approved/other status bookings, keep them approved
+            booking.status = BookingStatus.APPROVED
         
         details = f"Booking rescheduled from {old_start} to {new_start_time}"
         if force_override and conflicts:
@@ -369,9 +374,26 @@ class RangeBookingAutomation:
             bumper: The staff member performing the bump
             higher_priority_booking: The higher priority booking taking precedence
             reason: Reason for bumping
+        
+        Raises:
+            PermissionError: If bumper is not staff or admin
+            ValueError: If bookings don't overlap or don't share the same resource
         """
         if not self._is_staff_or_admin(bumper):
             raise PermissionError("Only staff or admin can bump bookings")
+        
+        # Validate that bookings overlap and share the same resource
+        if not booking_to_bump.overlaps_with(higher_priority_booking):
+            raise ValueError(
+                "Cannot bump: bookings must overlap in time and use the same resource"
+            )
+        
+        # Validate priority (optional warning, but still allow the bump)
+        if higher_priority_booking.priority <= booking_to_bump.priority:
+            # Log a warning in the reason but allow staff to proceed
+            if not reason:
+                reason = "Staff override"
+            reason = f"[Warning: Priority {higher_priority_booking.priority} not higher than {booking_to_bump.priority}] {reason}"
         
         previous_state = {"status": booking_to_bump.status.value}
         booking_to_bump.status = BookingStatus.BUMPED

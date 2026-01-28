@@ -315,6 +315,26 @@ class TestRescheduling:
         
         with pytest.raises(PermissionError, match="Only staff or admin can reschedule bookings"):
             system.reschedule_booking(booking, regular_user, new_start, new_end)
+    
+    def test_reschedule_pending_booking_stays_pending(self, system, bay1, regular_user, staff_user):
+        """Test that rescheduling a pending booking doesn't auto-approve it"""
+        start = datetime.now()
+        end = start + timedelta(hours=2)
+        
+        booking = system.create_booking_request(bay1, regular_user, start, end)
+        # Note: booking is PENDING, not approved
+        assert booking.status == BookingStatus.PENDING
+        
+        new_start = start + timedelta(days=1)
+        new_end = new_start + timedelta(hours=2)
+        
+        result = system.reschedule_booking(booking, staff_user, new_start, new_end)
+        
+        assert result is True
+        assert booking.start_time == new_start
+        assert booking.end_time == new_end
+        # Critical: status should remain PENDING, not auto-approved
+        assert booking.status == BookingStatus.PENDING
 
 
 class TestBumping:
@@ -354,6 +374,38 @@ class TestBumping:
         
         with pytest.raises(PermissionError, match="Only staff or admin can bump bookings"):
             system.bump_booking(booking1, regular_user, booking2)
+    
+    def test_bump_requires_overlapping_bookings(self, system, bay1, regular_user, staff_user):
+        """Test that bumping requires bookings to overlap"""
+        start = datetime.now()
+        end = start + timedelta(hours=2)
+        
+        booking1 = system.create_booking_request(bay1, regular_user, start, end)
+        system.approve_booking(booking1, staff_user)
+        
+        # Non-overlapping booking
+        booking2 = system.create_booking_request(
+            bay1, regular_user,
+            end + timedelta(hours=1),  # Starts after booking1 ends
+            end + timedelta(hours=3)
+        )
+        
+        with pytest.raises(ValueError, match="Cannot bump: bookings must overlap"):
+            system.bump_booking(booking1, staff_user, booking2)
+    
+    def test_bump_requires_same_resource(self, system, bay1, bay2, regular_user, staff_user):
+        """Test that bumping requires bookings on the same resource"""
+        start = datetime.now()
+        end = start + timedelta(hours=2)
+        
+        booking1 = system.create_booking_request(bay1, regular_user, start, end)
+        system.approve_booking(booking1, staff_user)
+        
+        # Booking on different resource
+        booking2 = system.create_booking_request(bay2, regular_user, start, end)
+        
+        with pytest.raises(ValueError, match="Cannot bump: bookings must overlap"):
+            system.bump_booking(booking1, staff_user, booking2)
 
 
 class TestCancellation:
