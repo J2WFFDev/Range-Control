@@ -2,6 +2,36 @@
 
 A controlled scheduling and approval system for managing shared range resources such as bays and facilities.
 
+---
+
+## 🚀 New: Railway Deployment Planning
+
+**Ready to deploy to production?** We've created comprehensive planning documentation:
+
+📖 **[Start Here: QUICKSTART.md](QUICKSTART.md)** - 5-minute guide to get started
+
+### Planning Documents
+
+| Document | Description |
+|----------|-------------|
+| **[QUICKSTART.md](QUICKSTART.md)** | Quick start guide - read this first! |
+| **[PROJECT_PLANNING.md](PROJECT_PLANNING.md)** | Complete project plan with 6 EPICs, user stories, timeline |
+| **[RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md)** | Step-by-step Railway deployment guide |
+| **[ARCHITECTURE.md](ARCHITECTURE.md)** | Technical architecture and system design |
+| **[GITHUB_PROJECTS_SETUP.md](GITHUB_PROJECTS_SETUP.md)** | How to set up project management |
+| **[SAMPLE_ISSUES.md](SAMPLE_ISSUES.md)** | Ready-to-use GitHub issues for all tasks |
+
+### Project Phases
+
+1. **Phase 1 (Weeks 1-3)**: Railway Infrastructure + Database Foundation
+2. **Phase 2 (Weeks 4-7)**: API Development + Database Integration
+3. **Phase 3 (Weeks 8-10)**: Frontend + DevOps
+4. **Phase 4 (Weeks 11-13)**: Production Readiness
+
+**Total Timeline**: 9-13 weeks | **Total Effort**: ~169 hours
+
+---
+
 ## Overview
 
 RangeBookingAutomation is a comprehensive booking management system that provides:
