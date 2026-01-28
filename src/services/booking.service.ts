@@ -13,6 +13,7 @@ import type {
 import { v4 as uuidv4 } from 'uuid';
 import { parseTime, combineDateTime } from '../utils/time.js';
 import { logAudit } from './audit.service.js';
+import * as calendarService from './calendar.service.js';
 
 // Generate unique request ID
 function generateRequestId(): string {
@@ -310,8 +311,15 @@ export async function approveBooking(
     
     await client.query('COMMIT');
     
-    // Return updated booking
-    return (await getBookingById(booking.id))!;
+    // Get updated booking
+    const updatedBooking = (await getBookingById(booking.id))!;
+    
+    // Create calendar events (async, don't block on errors)
+    calendarService.createCalendarEvents(updatedBooking).catch(err => {
+      console.error('Failed to create calendar events:', err);
+    });
+    
+    return updatedBooking;
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -441,7 +449,15 @@ export async function overrideApproveBooking(
     
     await client.query('COMMIT');
     
-    return (await getBookingById(booking.id))!;
+    // Get updated booking
+    const updatedBooking = (await getBookingById(booking.id))!;
+    
+    // Create calendar events (async, don't block on errors)
+    calendarService.createCalendarEvents(updatedBooking).catch(err => {
+      console.error('Failed to create calendar events:', err);
+    });
+    
+    return updatedBooking;
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
@@ -487,6 +503,7 @@ export async function overrideAndBumpBooking(
     
     // Mark all conflicting bookings as bumped
     const conflictingIds = [...new Set(conflictCheck.conflicts.map(c => c.request_id))];
+    const bumpedBookings = [];
     
     for (const conflictRequestId of conflictingIds) {
       const conflictBooking = await getBookingById(conflictRequestId);
@@ -509,6 +526,8 @@ export async function overrideAndBumpBooking(
           ip_address: input.ip_address,
           user_agent: input.user_agent
         }, client);
+        
+        bumpedBookings.push(conflictBooking);
       }
     }
     
@@ -551,7 +570,27 @@ export async function overrideAndBumpBooking(
     
     await client.query('COMMIT');
     
-    return (await getBookingById(booking.id))!;
+    // Get updated booking
+    const updatedBooking = (await getBookingById(booking.id))!;
+    
+    // Mark bumped calendar events as cancelled (async, don't block on errors)
+    for (const bumpedBooking of bumpedBookings) {
+      if (bumpedBooking.calendar_event_ids && bumpedBooking.calendar_event_ids.length > 0) {
+        calendarService.markCalendarEventCancelled(
+          bumpedBooking.calendar_event_ids,
+          `Bumped by ${booking.request_id}: ${input.override_reason}`
+        ).catch(err => {
+          console.error(`Failed to mark calendar events as bumped for ${bumpedBooking.request_id}:`, err);
+        });
+      }
+    }
+    
+    // Create calendar events for new booking (async, don't block on errors)
+    calendarService.createCalendarEvents(updatedBooking).catch(err => {
+      console.error('Failed to create calendar events:', err);
+    });
+    
+    return updatedBooking;
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;

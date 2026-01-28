@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import bookingsRouter from './routes/bookings.js';
 import resourcesRouter from './routes/resources.js';
 import auditRouter from './routes/audit.js';
+import calendarRouter from './routes/calendar.js';
 import pool from './db/connection.js';
 
 // Load environment variables
@@ -53,6 +54,7 @@ app.get('/', (req, res) => {
       bookings: '/api/bookings',
       resources: '/api/resources',
       audit: '/api/audit',
+      calendar: '/api/calendar',
       health: '/health'
     },
     documentation: 'See README.md for API documentation'
@@ -63,6 +65,7 @@ app.get('/', (req, res) => {
 app.use('/api/bookings', bookingsRouter);
 app.use('/api/resources', resourcesRouter);
 app.use('/api/audit', auditRouter);
+app.use('/api/calendar', calendarRouter);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
