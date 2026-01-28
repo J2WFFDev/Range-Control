@@ -701,7 +701,17 @@ export async function rescheduleBooking(
     
     await client.query('COMMIT');
     
-    return (await getBookingById(booking.id))!;
+    // Get updated booking
+    const updatedBooking = (await getBookingById(booking.id))!;
+    
+    // Update calendar events with new time (async, don't block on errors)
+    if (booking.calendar_event_ids && booking.calendar_event_ids.length > 0) {
+      calendarService.updateCalendarEvents(updatedBooking, booking.calendar_event_ids).catch(err => {
+        console.error('Failed to update calendar events during reschedule:', err);
+      });
+    }
+    
+    return updatedBooking;
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;

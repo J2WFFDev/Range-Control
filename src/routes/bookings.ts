@@ -7,7 +7,11 @@ const router = Router();
 // Helper to extract actor from request (placeholder for auth)
 function getActor(req: Request): string {
   // TODO: Extract from auth token
-  return req.body.actor || req.headers['x-actor'] as string || 'admin';
+  const actor = req.body.actor || req.headers['x-actor'] as string;
+  if (!actor) {
+    throw new Error('Actor/user identification is required');
+  }
+  return actor;
 }
 
 // Helper to get IP and user agent

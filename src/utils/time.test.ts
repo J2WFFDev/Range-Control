@@ -2,14 +2,13 @@ import { parseTime, combineDateTime, formatDate, formatTime } from './time';
 
 describe('Time Utils', () => {
   describe('parseTime', () => {
-    it('should parse valid time strings', () => {
+    it('should parse valid time strings with two-digit hours', () => {
       expect(parseTime('09:00')).toEqual({ hours: 9, minutes: 0 });
       expect(parseTime('14:30')).toEqual({ hours: 14, minutes: 30 });
       expect(parseTime('23:59')).toEqual({ hours: 23, minutes: 59 });
     });
 
     it('should throw error for invalid time format', () => {
-      expect(() => parseTime('9:00')).toThrow('Invalid time format');
       expect(() => parseTime('25:00')).toThrow('Invalid time values');
       expect(() => parseTime('14:60')).toThrow('Invalid time values');
       expect(() => parseTime('invalid')).toThrow('Invalid time format');

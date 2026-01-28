@@ -1,10 +1,10 @@
 // Time handling utilities for local timezone support
 
-// Parse time string in HH:MM format
+// Parse time string in HH:MM format (requires two-digit hours)
 export function parseTime(timeStr: string): { hours: number; minutes: number } {
-  const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+  const match = timeStr.match(/^(\d{2}):(\d{2})$/);
   if (!match) {
-    throw new Error(`Invalid time format: ${timeStr}. Expected HH:MM`);
+    throw new Error(`Invalid time format: ${timeStr}. Expected HH:MM (e.g., 09:00, 14:30)`);
   }
   
   const hours = parseInt(match[1], 10);
@@ -60,14 +60,16 @@ export function combineDateTime(
 }
 
 // Get timezone offset in minutes (simplified - doesn't handle DST properly)
-// In production, use a proper timezone library
+// WARNING: This simplified implementation does NOT account for Daylight Saving Time
+// In production, use a proper timezone library like luxon or date-fns-tz
 function getTimezoneOffset(timezone: string): number {
   // This is a simplified mapping. Use a proper library in production.
+  // These offsets are for standard time only and do NOT adjust for DST
   const offsets: Record<string, number> = {
-    'America/New_York': -300, // EST (UTC-5), doesn't account for DST
-    'America/Chicago': -360, // CST (UTC-6)
-    'America/Denver': -420, // MST (UTC-7)
-    'America/Los_Angeles': -480, // PST (UTC-8)
+    'America/New_York': -300, // EST (UTC-5) - Does NOT account for EDT (UTC-4)
+    'America/Chicago': -360, // CST (UTC-6) - Does NOT account for CDT (UTC-5)
+    'America/Denver': -420, // MST (UTC-7) - Does NOT account for MDT (UTC-6)
+    'America/Los_Angeles': -480, // PST (UTC-8) - Does NOT account for PDT (UTC-7)
     'UTC': 0,
   };
   
